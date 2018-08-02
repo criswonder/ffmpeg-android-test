@@ -14,4 +14,3 @@ Java_cookbook_testjni_MainActivity_setFloatArray(
         JNIEnv * env,
         jobject thiz,
         jfloatArray fArray);
-
