@@ -1,5 +1,6 @@
 package cookbook.testjni;
 
+import android.graphics.Bitmap;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
@@ -7,6 +8,8 @@ import android.view.View;
 import android.widget.TextView;
 
 public class MainActivity extends AppCompatActivity {
+    private final String TAG = "MainActivity";
+    private final boolean VERBOSE = true;
 
     // Used to load the 'native-lib' library on application startup.
     static {
@@ -44,11 +47,17 @@ public class MainActivity extends AppCompatActivity {
                     Log.d("andymao", intArray[i] + "");
                 }
 
-                String path = "/sdcard/idlefish_video/stopwatch.mp4";
+                String path = "/sdcard/idlefish_video/stopwatch_gop1.mp4";
 
                 int frameW = 720, frameH = 960;
                 int[] pixels = new int[frameW * frameH];
-                extractFrame2(path, 5000, pixels, frameW, frameH, false);
+                long start = System.currentTimeMillis();
+                extractFrame2(path, 1000*1000, pixels, frameW, frameH, false);
+                Log.e(TAG,"onClick use time="+(System.currentTimeMillis()-start));
+
+                Bitmap bmp = Bitmap.createBitmap(frameW, frameH, Bitmap.Config.ARGB_8888);
+                bmp.setPixels(pixels, 0, frameW, 0, 0, frameW, frameH);
+                if(VERBOSE) Log.e(TAG,"");
             }
         });
 

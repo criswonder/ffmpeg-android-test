@@ -501,9 +501,150 @@ int getVideoRotate(const char *inputFilePath) {
     return result;
 }
 
+//毛红云写的方法
+int extractFrameNew(const char *inputFilePath, const int startTimeMs, jint *outputJints, jint dstW,
+                    jint dstH, bool debug) {
 
-int extractFrame2(const char *inputFilePath, const int startTimeMs, jint *outputJints, jint dstW,
-                  jint dstH, bool debug) {
+    time_t time_start, time_end;
+    time_start = clock();
+
+    //注册组件
+    av_register_all();
+    avcodec_register_all();
+    AVFormatContext *pFormatCtx = avformat_alloc_context();
+
+    //打开视频文件
+    if (avformat_open_input(&pFormatCtx, inputFilePath, NULL, NULL) != 0) {
+        printf("%s, path:%s\n", "无法打开视频文件", inputFilePath);
+        return -1;
+    }
+
+    //获取输入文件信息
+    if (avformat_find_stream_info(pFormatCtx, NULL) < 0) {
+        printf("%s", "无法获取输入文件信息\n");
+        return -2;
+    }
+
+    //获取视频索引位置
+    int i = 0, video_stream_idx = -1;
+    for (; i < pFormatCtx->nb_streams; i++) {
+        if (pFormatCtx->streams[i]->codec->codec_type == AVMEDIA_TYPE_VIDEO) {
+            video_stream_idx = i;
+            break;
+        }
+    }
+
+    //获取解码器
+    AVCodecContext *codecCtx = pFormatCtx->streams[video_stream_idx]->codec;
+    AVCodec *codec = avcodec_find_decoder(codecCtx->codec_id);
+    if (codec == NULL) {
+        printf("%s", "无法获取解码器\n");
+        return -3;
+    }
+
+    //打开解码器
+    if (avcodec_open2(codecCtx, codec, NULL) < 0) {
+        printf("%s", "无法打开解码器\n");
+        return -4;
+    }
+
+    //压缩数据
+    AVPacket *packet = (AVPacket *) av_malloc(sizeof(AVPacket));
+
+    //解压缩数据
+    AVFrame *frame = av_frame_alloc();
+
+    int got_frame = 0, index = 0, ret = 0, keyFrameNum = 0;
+    int timeBase = 1.0 * pFormatCtx->streams[video_stream_idx]->time_base.den /
+                   pFormatCtx->streams[video_stream_idx]->time_base.num;
+    int timeStart =
+            1.0 * pFormatCtx->start_time * pFormatCtx->streams[video_stream_idx]->time_base.den /
+            pFormatCtx->streams[video_stream_idx]->time_base.num;
+
+    if (timeStart < 0)
+        timeStart = 0;
+
+
+    int timestamp = startTimeMs * timeBase / 1000l + timeStart;
+    ret = av_seek_frame(pFormatCtx, video_stream_idx,
+                        timestamp,
+                        AVSEEK_FLAG_BACKWARD);
+    LOGE("timestamp %.0d,timeBase=%d,bFoundKeyFrame=%d\n", timestamp, timeBase,
+         ret >= 0);
+    if (ret >= 0) {
+    } else {
+        LOGE("read frame failed!!!");
+        return -1;
+    }
+
+    time_end = clock();
+    LOGE("time:part1 total %.0f ms\n",
+         (float) (time_end - time_start) * 1000 / CLOCKS_PER_SEC);
+
+    while (true) {
+        int av_read_frame_result = av_read_frame(pFormatCtx, packet);
+        if (packet->stream_index != video_stream_idx)
+            continue;
+        if (av_read_frame_result == 0) {
+            ret = avcodec_decode_video2(codecCtx, frame, &got_frame, packet);
+            if (ret < 0) {
+                LOGE("avcodec_decode_video2 failed!!!");
+                return -1;
+            }
+
+//            LOGE("andymao pkt_pts=%lf", ((frame->pts * 1.0) / timeBase));
+            LOGE("andymao pkt_pts=%d", (int) (((frame->pts * 1.0) / timeBase) * 1000) );
+            unsigned char *outRgb = FrameWriteInToJPEG(frame, frame->linesize[0], frame->height,
+                                                       frame->linesize[0] - frame->width,
+                                                       outputJints, debug);
+
+            unsigned char *scaleRgb = do_Stretch_Linear(dstW, dstH, 24, outRgb,
+                                                        frame->width, frame->height);
+
+            jint len = dstW * dstH;
+            int p = 0;
+            int r, g, b;
+            for (int i = 0; i < len; i++) {
+                p = 0;
+
+                r = scaleRgb[i * 3];
+                g = scaleRgb[i * 3 + 1];
+                b = scaleRgb[i * 3 + 2];
+//
+                p = p | (255 << 24);
+                p = p | (r << 16);
+                p = p | (g << 8);
+                p = p | b;
+
+                outputJints[i] = p;
+            }
+
+            if (debug) {
+                char *outFile = "/sdcard/xianyu/jni_out_scale.jpeg";
+                WriteJpegFile(outFile, scaleRgb, dstW, dstH, 3, 100);
+            }
+            break;
+        } else {
+            LOGE("read frame failed!!!");
+            break;
+        }
+    }
+
+
+    av_frame_free(&frame);
+    avcodec_close(codecCtx);
+    avformat_close_input(&pFormatCtx);
+    avformat_free_context(pFormatCtx);
+    return 0;
+}
+
+
+/**
+ * 我是原来的方法
+ */
+int
+extractFrameOriginal(const char *inputFilePath, const int startTimeMs, jint *outputJints, jint dstW,
+                     jint dstH, bool debug) {
 
     //注册组件
     av_register_all();
@@ -575,8 +716,9 @@ int extractFrame2(const char *inputFilePath, const int startTimeMs, jint *output
         time_decode_start = clock();
         ret = avcodec_decode_video2(codecCtx, frame, &got_frame, packet);
         time_decode_end = clock();
-        LOGE("time:解码一帧所用时间 %.0f ms\n",
-             (float) (time_decode_end - time_decode_start) * 1000 / CLOCKS_PER_SEC);
+        LOGE("time:解码一帧所用时间 %.0fms, pts=%d\n",
+             (float) (time_decode_end - time_decode_start) * 1000 / CLOCKS_PER_SEC,
+             packet->pts);
         if (ret < 0) {
             //printf("%s\n", "解码完成");
             break;
@@ -637,17 +779,26 @@ int extractFrame2(const char *inputFilePath, const int startTimeMs, jint *output
 
             //找非关键帧，如果找到则继续找非关键帧
             if (bFoundKeyFrame) {
-                //TODO
-                int tmpDelta = abs(frame->pkt_pts - startTimeMs * timeBase / 1000l + timeStart);
-                if (bestDelta > tmpDelta)
+                int tmpDelta = abs(
+                        frame->pkt_pts - startTimeMs * timeBase / 1000l + timeStart);
+                LOGE("pkt_pts=%"
+                             PRId64
+                             ",bestDelta=%d,tmpDelta=%d\n", frame->pts, bestDelta, tmpDelta);
+//                LOGE("pkt_pts=%d,bestDelta=%d,tmpDelta=%d\n", frame->pts, bestDelta, tmpDelta);
+                if (bestDelta > tmpDelta) {
+                    LOGE("frame->pkt_pts write to bestDelta %d,new value %d", bestDelta, tmpDelta);
                     bestDelta = tmpDelta;
-                else if (bestDelta < tmpDelta) {
+                } else if (bestDelta < tmpDelta) {
                     bFoundFrame = true;
+                    LOGE("frame->pkt_pts bFoundFrame true");
                 }
             } else {
+                int timestamp = startTimeMs * timeBase / 1000l + timeStart;
                 ret = av_seek_frame(pFormatCtx, video_stream_idx,
-                                    startTimeMs * timeBase / 1000l + timeStart,
+                                    timestamp,
                                     AVSEEK_FLAG_BACKWARD);
+                LOGE("timestamp %.0d,timeBase=%d,bFoundKeyFrame=%d\n", timestamp, timeBase,
+                     ret >= 0);
                 if (ret >= 0) {
                     bFoundKeyFrame = true;
                 }
@@ -663,4 +814,25 @@ int extractFrame2(const char *inputFilePath, const int startTimeMs, jint *output
     avformat_free_context(pFormatCtx);
 
     return 0;
+}
+
+int extractFrame2(const char *inputFilePath, const int startTimeMs, jint *outputJints, jint dstW,
+                  jint dstH, bool debug) {
+    bool flag = true;
+    if (flag) {
+        time_t t_start_found_frame, t_end_found_frame;
+        t_start_found_frame = clock();
+        extractFrameNew(inputFilePath, startTimeMs, outputJints, dstW, dstH, debug);
+        t_end_found_frame = clock();
+        LOGE("time:extractFrameNew total %.0f ms\n",
+             (float) (t_end_found_frame - t_start_found_frame) * 1000 / CLOCKS_PER_SEC);
+//    } else {
+        time_t t_start_found_frame2, t_end_found_frame2;
+        t_start_found_frame2 = clock();
+        extractFrameOriginal(inputFilePath, startTimeMs, outputJints, dstW, dstH, debug);
+        t_end_found_frame2 = clock();
+        LOGE("time:extractFrameOriginal total %.0f ms\n",
+             (float) (t_end_found_frame2 - t_start_found_frame2) * 1000 / CLOCKS_PER_SEC);
+    }
+
 }

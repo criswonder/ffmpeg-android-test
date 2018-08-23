@@ -21,7 +21,6 @@ set(src_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 # Specifies a path to native header files.
 include_directories(
                     src/main/cpp/ffmpeglib/include/
-                    /Users/hongyun/dev/source/multi-media/ffmpeg-3.3.6
                     src/main/cpp/ffmpeg/
                     )
 
@@ -35,6 +34,7 @@ add_library( # Sets the name of the library.
              src/main/cpp/native-lib.cpp
              src/main/cpp/Test.cpp
              src/main/cpp/ffmpeg/ffmpeg_util.cc
+             src/main/cpp/ffmpeg/transcoding.c
               )
 
 # Searches for a specified prebuilt library and stores the path as a
@@ -65,9 +65,8 @@ target_link_libraries( # Specifies the target library.
                        native-lib
                        log
                        android
-
                         -ldl
-                        "${src_DIR}/src/main/cpp/ffmpeglib/libs/libjpeg.a"
+                         "${src_DIR}/src/main/cpp/ffmpeglib/libs/libjpeg.a"
                         libQuCore-ThirdParty
 
                        # Links the target library to the log library
