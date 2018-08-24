@@ -1,11 +1,14 @@
 #include "native-lib.h"
 #include "Test.h"
-#include <jni.h>
+
 #include <string>
 #include <ffmpeg_util.h>
+#include <android_log.h>
 #include "android/log.h"
 
-extern "C"
+extern "C" {
+#include <libavcodec/jni.h>
+}
 
 //JNIEXPORT jstring JNICALL
 //Java_cookbook_testjni_MainActivity_stringFromJNI(
@@ -99,4 +102,11 @@ Java_cookbook_testjni_MainActivity_extractFrame2(JNIEnv *env, jobject instance, 
 
     env->ReleaseStringUTFChars(filePath_, filePath);
     env->ReleaseIntArrayElements(pixels_, pixels, 0);
+}
+
+jint JNI_OnLoad(JavaVM* vm, void* reserved)//这个类似android的生命周期，加载jni的时候会自己调用
+{
+    LOGE("ffmpeg JNI_OnLoad");
+    av_jni_set_java_vm(vm, reserved);
+    return JNI_VERSION_1_6;
 }

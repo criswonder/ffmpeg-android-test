@@ -21,6 +21,20 @@ int MT_VIDEO_ROTATE_180 = 180;
 int MT_VIDEO_ROTATE_270 = 270;
 int MT_VIDEO_ROTATE_0 = 0;
 
+static void syslog_print(void *ptr,int level,const char *fmt, va_list vl){
+    switch (level) {
+        case AV_LOG_DEBUG:
+            LOGE(fmt,vl);
+            break;
+        default:
+            LOGE(fmt,vl);
+    }
+}
+
+static void syslog_init(){
+    av_log_set_callback(syslog_print);
+}
+
 static int combine_video(const std::vector<std::string> &inputFileList, const char *outputFile) {
     if (inputFileList.size() <= 0)
         return 0;
@@ -504,13 +518,13 @@ int getVideoRotate(const char *inputFilePath) {
 //毛红云写的方法
 int extractFrameNew(const char *inputFilePath, const int startTimeMs, jint *outputJints, jint dstW,
                     jint dstH, bool debug) {
-
+//    syslog_init();
     time_t time_start, time_end;
     time_start = clock();
 
     //注册组件
     av_register_all();
-    avcodec_register_all();
+//    avcodec_register_all();
     AVFormatContext *pFormatCtx = avformat_alloc_context();
 
     //打开视频文件
@@ -528,25 +542,73 @@ int extractFrameNew(const char *inputFilePath, const int startTimeMs, jint *outp
     //获取视频索引位置
     int i = 0, video_stream_idx = -1;
     for (; i < pFormatCtx->nb_streams; i++) {
-        if (pFormatCtx->streams[i]->codec->codec_type == AVMEDIA_TYPE_VIDEO) {
+        if (pFormatCtx->streams[i]->codecpar->codec_type == AVMEDIA_TYPE_VIDEO) {
             video_stream_idx = i;
             break;
         }
     }
 
-    //获取解码器
-    AVCodecContext *codecCtx = pFormatCtx->streams[video_stream_idx]->codec;
-    AVCodec *codec = avcodec_find_decoder(codecCtx->codec_id);
-    if (codec == NULL) {
-        printf("%s", "无法获取解码器\n");
-        return -3;
+    AVCodecParameters *pCodecPar = pFormatCtx->streams[video_stream_idx]->codecpar;
+    //查找解码器
+    //获取一个合适的编码器pCodec find a decoder for the video stream
+    //AVCodec *pCodec = avcodec_find_decoder(pCodecPar->codec_id);
+    AVCodec *pCodec;
+    switch (pCodecPar->codec_id){
+        case AV_CODEC_ID_H264:
+            pCodec = avcodec_find_decoder_by_name("h264_mediacodec");//硬解码264
+            if (pCodec == NULL) {
+                LOGE("Couldn't find Codec.AV_CODEC_ID_H264 \n");
+                return -1;
+            }
+            break;
+        case AV_CODEC_ID_MPEG4:
+            pCodec = avcodec_find_decoder_by_name("mpeg4_mediacodec");//硬解码mpeg4
+            if (pCodec == NULL) {
+                LOGE("Couldn't find Codec.\n");
+                return -1;
+            }
+            break;
+        case AV_CODEC_ID_HEVC:
+            pCodec = avcodec_find_decoder_by_name("hevc_mediacodec");//硬解码265
+            if (pCodec == NULL) {
+                LOGE("Couldn't find Codec.\n");
+                return -1;
+            }
+            break;
+        default:
+            pCodec = avcodec_find_decoder(pCodecPar->codec_id);//软解
+            if (pCodec == NULL) {
+                LOGE("Couldn't find Codec.\n");
+                return -1;
+            }
+            break;
+    }
+    AVCodecContext *codecCtx = avcodec_alloc_context3(pCodec);
+
+    // Copy context
+    if (avcodec_parameters_to_context(codecCtx, pCodecPar) != 0) {
+        fprintf(stderr, "Couldn't copy codec context");
+        return -1; // Error copying codec context
     }
 
-    //打开解码器
-    if (avcodec_open2(codecCtx, codec, NULL) < 0) {
-        printf("%s", "无法打开解码器\n");
-        return -4;
+    if (avcodec_open2(codecCtx, pCodec, NULL) < 0) {
+        LOGE("Could not open codec.");
+        return -1; // Could not open codec
     }
+
+    //获取解码器
+//    AVCodecContext *codecCtx = pFormatCtx->streams[video_stream_idx]->codec;
+//    AVCodec *codec = avcodec_find_decoder(codecCtx->codec_id);
+//    if (codec == NULL) {
+//        printf("%s", "无法获取解码器\n");
+//        return -3;
+//    }
+//
+//    //打开解码器
+//    if (avcodec_open2(codecCtx, codec, NULL) < 0) {
+//        printf("%s", "无法打开解码器\n");
+//        return -4;
+//    }
 
     //压缩数据
     AVPacket *packet = (AVPacket *) av_malloc(sizeof(AVPacket));
