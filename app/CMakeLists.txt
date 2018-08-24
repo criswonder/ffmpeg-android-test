@@ -55,7 +55,7 @@ add_library(libQuCore-ThirdParty SHARED IMPORTED)
 set_target_properties(libQuCore-ThirdParty
                     PROPERTIES
                     IMPORTED_LOCATION
-                    "${src_DIR}/src/main/cpp/ffmpeglib/libs/libQuCore-ThirdParty.so")
+                    "${src_DIR}/src/main/cpp/ffmpeglib/libs/libav_thirdparty.so")
 
 # Specifies libraries CMake should link to your target library. You
 # can link multiple libraries, such as libraries you define in this

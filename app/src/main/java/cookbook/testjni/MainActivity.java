@@ -13,7 +13,7 @@ public class MainActivity extends AppCompatActivity {
 
     // Used to load the 'native-lib' library on application startup.
     static {
-        System.loadLibrary("QuCore-ThirdParty");
+        System.loadLibrary("av_thirdparty");
         System.loadLibrary("native-lib");
     }
 
