@@ -1,3 +1,4 @@
+
 #include "ffmpeg_util.h"
 #include "android/log.h"
 #include "android_log.h"
@@ -14,6 +15,8 @@ extern "C" {
 #include  "libavutil/time.h"
 #include  "libavutil/mathematics.h"
 #include  "jpeglib.h"
+#include <libswscale/swscale.h>
+#include <libavutil/imgutils.h>
 }
 
 int MT_VIDEO_ROTATE_90 = 90;
@@ -22,13 +25,16 @@ int MT_VIDEO_ROTATE_270 = 270;
 int MT_VIDEO_ROTATE_0 = 0;
 
 static void syslog_print(void *ptr, int level, const char *fmt, va_list vl) {
-    switch (level) {
-        case AV_LOG_DEBUG:
-            LOGE(fmt, vl);
-            break;
-        default:
-            LOGE(fmt, vl);
-    }
+//    for (int i = 0; i < fmt; ++i) {
+//
+//    }
+//    switch (level) {
+//        case AV_LOG_DEBUG:
+//            LOGE(fmt, vl);
+//            break;
+//        default:
+//            LOGE(fmt, vl);
+//    }
 }
 
 static void syslog_init() {
@@ -444,10 +450,11 @@ FrameWriteInToJPEG(AVFrame *pFrame, int width, int height, int pad_size, jint *i
     }
 
 
-    if (debug) {
-        char *outFile = "/sdcard/xianyu/jni_out.jpeg";
-        WriteJpegFile(outFile, rgb, new_width, new_height, 3, 100);
-    }
+//    if (debug) {
+//        char *outFile = "/sdcard/xianyu/jni_out.jpeg";
+//        WriteJpegFile(outFile, rgb, new_width, new_height, 3, 100);
+//    }
+
     return rgb;
 }
 
@@ -517,10 +524,12 @@ int getVideoRotate(const char *inputFilePath) {
 }
 
 //毛红云写的方法
-int extractFrameNew(const char *inputFilePath, const int startTimeMs, jint *outputJints, jint dstW,
+int extractFrameNew(const char *inputFilePath, const int startTimeMs,
+                    jint *outputJints, jint dstW,
                     jint dstH, bool debug) {
     LOGE("extractFrameNew begin \n");
 
+    syslog_init();
     time_t time_start, time_end;
     time_start = clock();
 
@@ -619,6 +628,19 @@ int extractFrameNew(const char *inputFilePath, const int startTimeMs, jint *outp
     //解压缩数据
     AVFrame *frame = av_frame_alloc();
 
+    AVFrame *pFrameRGBA = av_frame_alloc();
+    if (pFrameRGBA == NULL || frame == NULL) {
+        LOGE("Could not allocate video frame.");
+        return -1;
+    }
+
+    // Determine required buffer size and allocate buffer
+    int numBytes = av_image_get_buffer_size(AV_PIX_FMT_RGBA, codecCtx->width, codecCtx->height,
+                                            1);
+    uint8_t *buffer = (uint8_t *) av_malloc(numBytes * sizeof(uint8_t));
+    av_image_fill_arrays(pFrameRGBA->data, pFrameRGBA->linesize, buffer, AV_PIX_FMT_RGBA,
+                         codecCtx->width, codecCtx->height, 1);
+
     int got_frame = 0, index = 0, ret = 0, keyFrameNum = 0;
     int timeBase = 1.0 * pFormatCtx->streams[video_stream_idx]->time_base.den /
                    pFormatCtx->streams[video_stream_idx]->time_base.num;
@@ -646,25 +668,43 @@ int extractFrameNew(const char *inputFilePath, const int startTimeMs, jint *outp
     LOGE("time:part1 total %.0f ms\n",
          (float) (time_end - time_start) * 1000 / CLOCKS_PER_SEC);
 
+    struct SwsContext *sws_ctx = sws_getContext(codecCtx->width/*视频宽度*/, codecCtx->height/*视频高度*/,
+                                                codecCtx->pix_fmt/*像素格式*/,
+                                                codecCtx->width/*目标宽度*/,
+                                                codecCtx->height/*目标高度*/, AV_PIX_FMT_RGBA/*目标格式*/,
+                                                SWS_BICUBIC/*图像转换的一些算法*/, NULL, NULL, NULL);
+
+    if (sws_ctx == NULL) {
+        LOGE("Cannot initialize the conversion context!\n");
+        return -1;
+    }
+
+    int videoWidth = codecCtx->width;
+    int videoHeight = codecCtx->height;
+
     while (true) {
         int av_read_frame_result = av_read_frame(pFormatCtx, packet);
         if (packet->stream_index != video_stream_idx)
             continue;
         if (av_read_frame_result == 0) {
-            ret = avcodec_decode_video2(codecCtx, frame, &got_frame, packet);
+            ret = avcodec_send_packet(codecCtx, packet);
+            if (ret < 0) {
+                break;
+            }
+
+            ret = avcodec_receive_frame(codecCtx, frame);
             if (ret < 0) {
                 LOGE("avcodec_decode_video2 failed!!!");
-                return -1;
+                continue;
             }
 
 //            LOGE("andymao pkt_pts=%lf", ((frame->pts * 1.0) / timeBase));
-            LOGE("andymao pkt_pts=%d", (int) (((frame->pts * 1.0) / timeBase) * 1000));
-            unsigned char *outRgb = FrameWriteInToJPEG(frame, frame->linesize[0], frame->height,
-                                                       frame->linesize[0] - frame->width,
-                                                       outputJints, debug);
+            sws_scale(sws_ctx, (uint8_t const *const *) frame->data,
+                      frame->linesize, 0, codecCtx->height,
+                      pFrameRGBA->data, pFrameRGBA->linesize);
 
-            unsigned char *scaleRgb = do_Stretch_Linear(dstW, dstH, 24, outRgb,
-                                                        frame->width, frame->height);
+            uint8_t *src = pFrameRGBA->data[0];
+            int srcStride = pFrameRGBA->linesize[0];
 
             jint len = dstW * dstH;
             int p = 0;
@@ -672,9 +712,9 @@ int extractFrameNew(const char *inputFilePath, const int startTimeMs, jint *outp
             for (int i = 0; i < len; i++) {
                 p = 0;
 
-                r = scaleRgb[i * 3];
-                g = scaleRgb[i * 3 + 1];
-                b = scaleRgb[i * 3 + 2];
+                r = src[i * 3];
+                g = src[i * 3 + 1];
+                b = src[i * 3 + 2];
 //
                 p = p | (255 << 24);
                 p = p | (r << 16);
@@ -684,10 +724,6 @@ int extractFrameNew(const char *inputFilePath, const int startTimeMs, jint *outp
                 outputJints[i] = p;
             }
 
-            if (debug) {
-                char *outFile = "/sdcard/xianyu/jni_out_scale2.jpeg";
-                WriteJpegFile(outFile, scaleRgb, dstW, dstH, 3, 100);
-            }
             break;
         } else {
             LOGE("read frame failed!!!");
@@ -883,8 +919,8 @@ extractFrameOriginal(const char *inputFilePath, const int startTimeMs, jint *out
 
 int extractFrame2(const char *inputFilePath, const int startTimeMs, jint *outputJints, jint dstW,
                   jint dstH, bool debug) {
-//    syslog_init();
-    debug = true;
+    syslog_init();
+    debug = false;
     bool flag = true;
     if (flag) {
         time_t t_start_found_frame, t_end_found_frame;
@@ -894,7 +930,6 @@ int extractFrame2(const char *inputFilePath, const int startTimeMs, jint *output
         LOGE("time:extractFrameNew total %.0f ms\n",
              (float) (t_end_found_frame - t_start_found_frame) * 1000 / CLOCKS_PER_SEC);
 //    } else {
-
 //        time_t t_start_found_frame2, t_end_found_frame2;
 //        t_start_found_frame2 = clock();
 //        extractFrameOriginal(inputFilePath, startTimeMs, outputJints, dstW, dstH, debug);
