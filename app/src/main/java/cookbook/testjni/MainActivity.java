@@ -54,7 +54,11 @@ public class MainActivity extends AppCompatActivity {
 //                int frameW = 1920, frameH = 1080;
                 int[] pixels = new int[frameW * frameH];
                 long start = System.currentTimeMillis();
-                extractFrame2(path, 1000*1000, pixels, frameW, frameH, false);
+
+                for (int i = 0; i < 100000; i++) {
+                    extractFrame2(path, 1000*1000, pixels, frameW, frameH, false);
+                }
+
                 Log.e(TAG,"onClick use time="+(System.currentTimeMillis()-start));
 
                 Bitmap bmp = Bitmap.createBitmap(frameW, frameH, Bitmap.Config.ARGB_8888);
