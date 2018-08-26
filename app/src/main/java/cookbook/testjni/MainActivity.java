@@ -47,10 +47,10 @@ public class MainActivity extends AppCompatActivity {
                     Log.d("andymao", intArray[i] + "");
                 }
 
-//                String path = "/sdcard/idlefish_video/stopwatch_gop1.mp4";
-                String path = "/sdcard/idlefish_video/camera_1080p.mp4";
-
+                String path = "/sdcard/idlefish_video/stopwatch_gop1.mp4";
                 int frameW = 720, frameH = 960;
+//                String path = "/sdcard/idlefish_video/camera_1080p.mp4";
+//                int frameW = 1080, frameH = 1920;
                 int[] pixels = new int[frameW * frameH];
                 long start = System.currentTimeMillis();
                 extractFrame2(path, 1000*1000, pixels, frameW, frameH, false);

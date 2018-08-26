@@ -21,17 +21,17 @@ int MT_VIDEO_ROTATE_180 = 180;
 int MT_VIDEO_ROTATE_270 = 270;
 int MT_VIDEO_ROTATE_0 = 0;
 
-static void syslog_print(void *ptr,int level,const char *fmt, va_list vl){
+static void syslog_print(void *ptr, int level, const char *fmt, va_list vl) {
     switch (level) {
         case AV_LOG_DEBUG:
-            LOGE(fmt,vl);
+            LOGE(fmt, vl);
             break;
         default:
-            LOGE(fmt,vl);
+            LOGE(fmt, vl);
     }
 }
 
-static void syslog_init(){
+static void syslog_init() {
     av_log_set_callback(syslog_print);
 }
 
@@ -399,6 +399,7 @@ static unsigned char *
 FrameWriteInToJPEG(AVFrame *pFrame, int width, int height, int pad_size, jint *inputInt32,
                    bool debug
 ) {
+    LOGE("FrameWriteInToJPEG %dx%d",width,height);
 
     uint8_t *rgb = new uint8_t[width * height * 3];
     uint8_t *data_Y = pFrame->data[0]; //width * height
@@ -518,7 +519,7 @@ int getVideoRotate(const char *inputFilePath) {
 //毛红云写的方法
 int extractFrameNew(const char *inputFilePath, const int startTimeMs, jint *outputJints, jint dstW,
                     jint dstH, bool debug) {
-//    syslog_init();
+
     time_t time_start, time_end;
     time_start = clock();
 
@@ -553,7 +554,7 @@ int extractFrameNew(const char *inputFilePath, const int startTimeMs, jint *outp
     //获取一个合适的编码器pCodec find a decoder for the video stream
     //AVCodec *pCodec = avcodec_find_decoder(pCodecPar->codec_id);
     AVCodec *pCodec;
-    switch (pCodecPar->codec_id){
+    switch (pCodecPar->codec_id) {
         case AV_CODEC_ID_H264:
             pCodec = avcodec_find_decoder_by_name("h264_mediacodec");//硬解码264
             if (pCodec == NULL) {
@@ -655,7 +656,7 @@ int extractFrameNew(const char *inputFilePath, const int startTimeMs, jint *outp
             }
 
 //            LOGE("andymao pkt_pts=%lf", ((frame->pts * 1.0) / timeBase));
-            LOGE("andymao pkt_pts=%d", (int) (((frame->pts * 1.0) / timeBase) * 1000) );
+            LOGE("andymao pkt_pts=%d", (int) (((frame->pts * 1.0) / timeBase) * 1000));
             unsigned char *outRgb = FrameWriteInToJPEG(frame, frame->linesize[0], frame->height,
                                                        frame->linesize[0] - frame->width,
                                                        outputJints, debug);
@@ -682,7 +683,7 @@ int extractFrameNew(const char *inputFilePath, const int startTimeMs, jint *outp
             }
 
             if (debug) {
-                char *outFile = "/sdcard/xianyu/jni_out_scale.jpeg";
+                char *outFile = "/sdcard/xianyu/jni_out_scale2.jpeg";
                 WriteJpegFile(outFile, scaleRgb, dstW, dstH, 3, 100);
             }
             break;
@@ -829,7 +830,7 @@ extractFrameOriginal(const char *inputFilePath, const int startTimeMs, jint *out
                 }
 
                 if (debug) {
-                    char *outFile = "/sdcard/xianyu/jni_out_scale.jpeg";
+                    char *outFile = "/sdcard/xianyu/jni_out_scale1.jpeg";
                     WriteJpegFile(outFile, scaleRgb, dstW, dstH, 3, 100);
                 }
                 t_end = clock();
@@ -880,6 +881,8 @@ extractFrameOriginal(const char *inputFilePath, const int startTimeMs, jint *out
 
 int extractFrame2(const char *inputFilePath, const int startTimeMs, jint *outputJints, jint dstW,
                   jint dstH, bool debug) {
+//    syslog_init();
+    debug = true;
     bool flag = true;
     if (flag) {
         time_t t_start_found_frame, t_end_found_frame;
@@ -889,12 +892,13 @@ int extractFrame2(const char *inputFilePath, const int startTimeMs, jint *output
         LOGE("time:extractFrameNew total %.0f ms\n",
              (float) (t_end_found_frame - t_start_found_frame) * 1000 / CLOCKS_PER_SEC);
 //    } else {
-        time_t t_start_found_frame2, t_end_found_frame2;
-        t_start_found_frame2 = clock();
-        extractFrameOriginal(inputFilePath, startTimeMs, outputJints, dstW, dstH, debug);
-        t_end_found_frame2 = clock();
-        LOGE("time:extractFrameOriginal total %.0f ms\n",
-             (float) (t_end_found_frame2 - t_start_found_frame2) * 1000 / CLOCKS_PER_SEC);
+
+//        time_t t_start_found_frame2, t_end_found_frame2;
+//        t_start_found_frame2 = clock();
+//        extractFrameOriginal(inputFilePath, startTimeMs, outputJints, dstW, dstH, debug);
+//        t_end_found_frame2 = clock();
+//        LOGE("time:extractFrameOriginal total %.0f ms\n",
+//             (float) (t_end_found_frame2 - t_start_found_frame2) * 1000 / CLOCKS_PER_SEC);
     }
 
 }

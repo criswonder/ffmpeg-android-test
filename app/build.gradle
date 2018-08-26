@@ -49,6 +49,16 @@ android {
         jni.srcDirs = []
         jniLibs.srcDir "src/main/libs"
     }
+
+    packagingOptions {
+        doNotStrip "*/armeabi/*.so"
+        doNotStrip "*/armeabi-v7a/*.so"
+        doNotStrip "*/arm64-v8a/*.so"
+        doNotStrip "*/x86/*.so"
+        doNotStrip "*/x86_64/*.so"
+        doNotStrip "*/mips/*.so"
+        doNotStrip "*/mips64/*.so"
+    }
 }
 
 dependencies {

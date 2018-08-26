@@ -21,6 +21,7 @@ set(src_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 # Specifies a path to native header files.
 include_directories(
                     src/main/cpp/ffmpeglib/include/
+
                     src/main/cpp/ffmpeg/
                     )
 
@@ -55,7 +56,7 @@ add_library(libQuCore-ThirdParty SHARED IMPORTED)
 set_target_properties(libQuCore-ThirdParty
                     PROPERTIES
                     IMPORTED_LOCATION
-                    "${src_DIR}/src/main/cpp/ffmpeglib/libs/libav_thirdparty.so")
+                    "${src_DIR}/src/main/libs/armeabi-v7a/libav_thirdparty.so")
 
 # Specifies libraries CMake should link to your target library. You
 # can link multiple libraries, such as libraries you define in this
