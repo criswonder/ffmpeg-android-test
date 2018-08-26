@@ -9,7 +9,7 @@ public class MyApplication extends Application{
     public void onCreate() {
         super.onCreate();
 
-        CrashReport.initCrashReport(getApplicationContext(),
-                "84086eff24", true);
+//        CrashReport.initCrashReport(getApplicationContext(),
+//                "84086eff24", true);
     }
 }

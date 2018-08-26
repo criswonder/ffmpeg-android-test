@@ -519,6 +519,7 @@ int getVideoRotate(const char *inputFilePath) {
 //毛红云写的方法
 int extractFrameNew(const char *inputFilePath, const int startTimeMs, jint *outputJints, jint dstW,
                     jint dstH, bool debug) {
+    LOGE("extractFrameNew begin \n");
 
     time_t time_start, time_end;
     time_start = clock();
@@ -530,13 +531,13 @@ int extractFrameNew(const char *inputFilePath, const int startTimeMs, jint *outp
 
     //打开视频文件
     if (avformat_open_input(&pFormatCtx, inputFilePath, NULL, NULL) != 0) {
-        printf("%s, path:%s\n", "无法打开视频文件", inputFilePath);
+        LOGE("%s, path:%s\n", "无法打开视频文件", inputFilePath);
         return -1;
     }
 
     //获取输入文件信息
     if (avformat_find_stream_info(pFormatCtx, NULL) < 0) {
-        printf("%s", "无法获取输入文件信息\n");
+        LOGE("%s", "无法获取输入文件信息\n");
         return -2;
     }
 
@@ -554,6 +555,7 @@ int extractFrameNew(const char *inputFilePath, const int startTimeMs, jint *outp
     //获取一个合适的编码器pCodec find a decoder for the video stream
     //AVCodec *pCodec = avcodec_find_decoder(pCodecPar->codec_id);
     AVCodec *pCodec;
+    LOGE("avcodec_find_decoder_by_name \n");
     switch (pCodecPar->codec_id) {
         case AV_CODEC_ID_H264:
             pCodec = avcodec_find_decoder_by_name("h264_mediacodec");//硬解码264
