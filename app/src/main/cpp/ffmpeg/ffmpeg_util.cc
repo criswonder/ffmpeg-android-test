@@ -402,10 +402,12 @@ do_Stretch_Linear(int w_Dest, int h_Dest, int bit_depth, unsigned char *src, int
  *
  */
 static unsigned char *
-FrameWriteInToJPEG(AVFrame *pFrame, int width, int height, int pad_size, jint *inputInt32,
+FrameWriteInToJPEG(AVFrame *pFrame,
+                   int width, int height,
+                   int pad_size, jint *inputInt32,
                    bool debug
 ) {
-    LOGE("FrameWriteInToJPEG %dx%d",width,height);
+    LOGE("FrameWriteInToJPEG %dx%d", width, height);
 
     uint8_t *rgb = new uint8_t[width * height * 3];
     uint8_t *data_Y = pFrame->data[0]; //width * height
@@ -525,8 +527,8 @@ int getVideoRotate(const char *inputFilePath) {
 
 //毛红云写的方法
 int extractFrameNew(const char *inputFilePath, const int startTimeMs,
-                    jint *outputJints, jint dstW,
-                    jint dstH, bool debug) {
+                    jint *outputJints, const jint dstW,
+                    const jint dstH, bool debug) {
     LOGE("extractFrameNew begin \n");
 
     syslog_init();
@@ -709,19 +711,26 @@ int extractFrameNew(const char *inputFilePath, const int startTimeMs,
             jint len = dstW * dstH;
             int p = 0;
             int r, g, b;
-            for (int i = 0; i < len; i++) {
-                p = 0;
+            for (int i = 0; i < dstH; i++) {
+                int lineStart = srcStride * i;
+                for (int j = 0; j < dstW; ++j) {
+                    //如果要处理的数据大于srcStride则跳过
+                    if(j*4+3>(srcStride-1)){
+                        LOGE("SKIP!");
+                        break;
+                    }
+                    p = 0;
+                    r = src[lineStart + j * 4];
+                    g = src[lineStart + j * 4 + 1];
+                    b = src[lineStart + j * 4 + 2];
 
-                r = src[i * 3];
-                g = src[i * 3 + 1];
-                b = src[i * 3 + 2];
-//
-                p = p | (255 << 24);
-                p = p | (r << 16);
-                p = p | (g << 8);
-                p = p | b;
+                    p = p | (255 << 24);
+                    p = p | (r << 16);
+                    p = p | (g << 8);
+                    p = p | b;
 
-                outputJints[i] = p;
+                    outputJints[i*dstW+j] = p;
+                }
             }
 
             break;
@@ -917,7 +926,8 @@ extractFrameOriginal(const char *inputFilePath, const int startTimeMs, jint *out
     return 0;
 }
 
-int extractFrame2(const char *inputFilePath, const int startTimeMs, jint *outputJints, jint dstW,
+int extractFrame2(const char *inputFilePath, const int startTimeMs, jint *outputJints,
+                  jint dstW,
                   jint dstH, bool debug) {
     syslog_init();
     debug = false;
@@ -930,12 +940,12 @@ int extractFrame2(const char *inputFilePath, const int startTimeMs, jint *output
         LOGE("time:extractFrameNew total %.0f ms\n",
              (float) (t_end_found_frame - t_start_found_frame) * 1000 / CLOCKS_PER_SEC);
 //    } else {
-//        time_t t_start_found_frame2, t_end_found_frame2;
-//        t_start_found_frame2 = clock();
-//        extractFrameOriginal(inputFilePath, startTimeMs, outputJints, dstW, dstH, debug);
-//        t_end_found_frame2 = clock();
-//        LOGE("time:extractFrameOriginal total %.0f ms\n",
-//             (float) (t_end_found_frame2 - t_start_found_frame2) * 1000 / CLOCKS_PER_SEC);
+        time_t t_start_found_frame2, t_end_found_frame2;
+        t_start_found_frame2 = clock();
+        extractFrameOriginal(inputFilePath, startTimeMs, outputJints, dstW, dstH, debug);
+        t_end_found_frame2 = clock();
+        LOGE("time:extractFrameOriginal total %.0f ms\n",
+             (float) (t_end_found_frame2 - t_start_found_frame2) * 1000 / CLOCKS_PER_SEC);
     }
 
 }
