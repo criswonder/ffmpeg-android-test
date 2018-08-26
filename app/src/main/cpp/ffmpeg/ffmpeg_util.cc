@@ -701,37 +701,37 @@ int extractFrameNew(const char *inputFilePath, const int startTimeMs,
             }
 
 //            LOGE("andymao pkt_pts=%lf", ((frame->pts * 1.0) / timeBase));
-            sws_scale(sws_ctx, (uint8_t const *const *) frame->data,
-                      frame->linesize, 0, codecCtx->height,
-                      pFrameRGBA->data, pFrameRGBA->linesize);
-
-            uint8_t *src = pFrameRGBA->data[0];
-            int srcStride = pFrameRGBA->linesize[0];
-
-            jint len = dstW * dstH;
-            int p = 0;
-            int r, g, b;
-            for (int i = 0; i < dstH; i++) {
-                int lineStart = srcStride * i;
-                for (int j = 0; j < dstW; ++j) {
-                    //如果要处理的数据大于srcStride则跳过
-                    if(j*4+3>(srcStride-1)){
-                        LOGE("SKIP!");
-                        break;
-                    }
-                    p = 0;
-                    r = src[lineStart + j * 4];
-                    g = src[lineStart + j * 4 + 1];
-                    b = src[lineStart + j * 4 + 2];
-
-                    p = p | (255 << 24);
-                    p = p | (r << 16);
-                    p = p | (g << 8);
-                    p = p | b;
-
-                    outputJints[i*dstW+j] = p;
-                }
-            }
+//            sws_scale(sws_ctx, (uint8_t const *const *) frame->data,
+//                      frame->linesize, 0, codecCtx->height,
+//                      pFrameRGBA->data, pFrameRGBA->linesize);
+//
+//            uint8_t *src = pFrameRGBA->data[0];
+//            int srcStride = pFrameRGBA->linesize[0];
+//
+//            jint len = dstW * dstH;
+//            int p = 0;
+//            int r, g, b;
+//            for (int i = 0; i < dstH; i++) {
+//                int lineStart = srcStride * i;
+//                for (int j = 0; j < dstW; ++j) {
+//                    //如果要处理的数据大于srcStride则跳过
+//                    if(j*4+3>(srcStride-1)){
+//                        LOGE("SKIP!");
+//                        break;
+//                    }
+//                    p = 0;
+//                    r = src[lineStart + j * 4];
+//                    g = src[lineStart + j * 4 + 1];
+//                    b = src[lineStart + j * 4 + 2];
+//
+//                    p = p | (255 << 24);
+//                    p = p | (r << 16);
+//                    p = p | (g << 8);
+//                    p = p | b;
+//
+//                    outputJints[i*dstW+j] = p;
+//                }
+//            }
 
             break;
         } else {
