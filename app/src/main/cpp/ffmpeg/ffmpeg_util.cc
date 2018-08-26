@@ -933,12 +933,12 @@ int extractFrame2(const char *inputFilePath, const int startTimeMs, jint *output
     debug = false;
     bool flag = true;
     if (flag) {
-        time_t t_start_found_frame, t_end_found_frame;
-        t_start_found_frame = clock();
-        extractFrameNew(inputFilePath, startTimeMs, outputJints, dstW, dstH, debug);
-        t_end_found_frame = clock();
-        LOGE("time:extractFrameNew total %.0f ms\n",
-             (float) (t_end_found_frame - t_start_found_frame) * 1000 / CLOCKS_PER_SEC);
+//        time_t t_start_found_frame, t_end_found_frame;
+//        t_start_found_frame = clock();
+//        extractFrameNew(inputFilePath, startTimeMs, outputJints, dstW, dstH, debug);
+//        t_end_found_frame = clock();
+//        LOGE("time:extractFrameNew total %.0f ms\n",
+//             (float) (t_end_found_frame - t_start_found_frame) * 1000 / CLOCKS_PER_SEC);
 //    } else {
         time_t t_start_found_frame2, t_end_found_frame2;
         t_start_found_frame2 = clock();
