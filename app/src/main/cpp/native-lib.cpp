@@ -110,3 +110,28 @@ jint JNI_OnLoad(JavaVM* vm, void* reserved)//这个类似android的生命周期�
     av_jni_set_java_vm(vm, reserved);
     return JNI_VERSION_1_6;
 }
+
+extern "C"
+JNIEXPORT void JNICALL
+Java_cookbook_testjni_MainActivity_mergeMp4Clips(JNIEnv *env, jobject instance, jobjectArray paths,
+                                                 jstring mVideoOutputPath_) {
+    const char *mVideoOutputPath = env->GetStringUTFChars(mVideoOutputPath_, 0);
+
+    const char *output = env->GetStringUTFChars(mVideoOutputPath_, 0);
+    std::vector<std::string> inputFileList;
+
+    int stringCount = env->GetArrayLength(paths);
+    for (int i = 0; i < stringCount; i++) {
+        jstring pathStr = (jstring) (env->GetObjectArrayElement(paths, i));
+        const char *pathChars = env->GetStringUTFChars(pathStr, 0);
+        // Don't forget to call `ReleaseStringUTFChars` when you're done.
+
+        inputFileList.push_back(std::string(pathChars));
+
+        env->ReleaseStringUTFChars(pathStr, pathChars);
+    }
+
+    combine_video(inputFileList,output);
+
+    env->ReleaseStringUTFChars(mVideoOutputPath_, mVideoOutputPath);
+}

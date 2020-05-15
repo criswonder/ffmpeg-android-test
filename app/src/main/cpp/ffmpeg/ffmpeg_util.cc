@@ -2,6 +2,7 @@
 #include "ffmpeg_util.h"
 #include "android/log.h"
 #include "android_log.h"
+#include "cstring"
 
 //ffmpeg header file
 extern "C" {
@@ -24,17 +25,44 @@ int MT_VIDEO_ROTATE_180 = 180;
 int MT_VIDEO_ROTATE_270 = 270;
 int MT_VIDEO_ROTATE_0 = 0;
 
+
 static void syslog_print(void *ptr, int level, const char *fmt, va_list vl) {
-//    for (int i = 0; i < fmt; ++i) {
+    //调试代码，查看某个string是否包含另外的string
+//    using namespace std;
+//    string fmtStr = std::string(fmt);
+//    std::string str2 ("suitable");
+//    std::size_t found = fmtStr.find(str2);
 //
+//    if(found!=std::string::npos){
+//        //找到字符串了
 //    }
-//    switch (level) {
-//        case AV_LOG_DEBUG:
-//            LOGE(fmt, vl);
-//            break;
-//        default:
-//            LOGE(fmt, vl);
-//    }
+
+    va_list vl2;
+    char line[1024];
+    static int print_prefix = 1;
+    va_copy(vl2, vl);
+    // av_log_default_callback(ptr, level, fmt, vl);
+    av_log_format_line(ptr, level, fmt, vl2, line, sizeof(line), &print_prefix);
+    va_end(vl2);
+
+    char *strFmt = "%s";
+
+    switch (level) {
+        case AV_LOG_DEBUG:
+            LOGD(strFmt, line);
+            break;
+        case AV_LOG_WARNING:
+            LOGW(strFmt, line);
+            break;
+        case AV_LOG_INFO:
+            LOGI(strFmt, line);
+            break;
+        case AV_LOG_ERROR:
+            LOGE(strFmt, line);
+            break;
+        default:
+            LOGE(strFmt, line);
+    }
 }
 
 static void syslog_init() {
@@ -42,6 +70,7 @@ static void syslog_init() {
 }
 
 static int combine_video(const std::vector<std::string> &inputFileList, const char *outputFile) {
+    syslog_init();
     if (inputFileList.size() <= 0)
         return 0;
     std::string inputFile = inputFileList[0];
@@ -62,12 +91,14 @@ static int combine_video(const std::vector<std::string> &inputFileList, const ch
         printf("%s, path:%s\n", "无法打开视频文件", inputFile.c_str());
         return -1;
     }
+    LOGE("视频文件打开成功");
 
     //获取输入文件信息
     if (avformat_find_stream_info(pFormatCtx, NULL) < 0) {
         printf("%s", "无法获取输入文件信息\n");
         return -2;
     }
+    LOGE("文件信息成功");
 
     //获取流索引位置
     int i = 0, video_stream_idx = -1, audio_stream_idx = -1;
@@ -83,7 +114,7 @@ static int combine_video(const std::vector<std::string> &inputFileList, const ch
     avformat_alloc_output_context2(&pOutFormatContext,
                                    NULL, NULL, outputFile);
     if (pOutFormatContext == NULL) {
-        printf("Could not allocate output context");
+        LOGE("Could not allocate output context");
         return -3;
     }
 
@@ -91,7 +122,7 @@ static int combine_video(const std::vector<std::string> &inputFileList, const ch
         AVStream *inAVStream = pFormatCtx->streams[i];
         AVStream *outAVStream = avformat_new_stream(pOutFormatContext, inAVStream->codec->codec);
         if (avcodec_copy_context(outAVStream->codec, inAVStream->codec) < 0) {
-            printf("Failed to copy codec context");
+            LOGE("Failed to copy codec context");
             return -4;
         }
 
@@ -109,14 +140,16 @@ static int combine_video(const std::vector<std::string> &inputFileList, const ch
 
     avio_open(&pOutFormatContext->pb, outputFile, AVIO_FLAG_WRITE);
     if (pOutFormatContext->pb == NULL) {
-        printf("Could not open for writing");
+        LOGE("Could not open for writing");
         return -6;
     }
 
     if (avformat_write_header(pOutFormatContext, NULL) < 0) {
-        printf("Could not write header");
+        LOGE("Could not write header");
         return -7;
     }
+
+    LOGE("文件信息成功2");
 
     //压缩数据
     AVPacket *packet = (AVPacket *) av_malloc(sizeof(AVPacket));

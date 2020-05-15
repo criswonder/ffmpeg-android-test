@@ -7,6 +7,8 @@ import android.util.Log;
 import android.view.View;
 import android.widget.TextView;
 
+import java.util.ArrayList;
+
 public class MainActivity extends AppCompatActivity {
     private final String TAG = "MainActivity";
     private final boolean VERBOSE = true;
@@ -29,6 +31,25 @@ public class MainActivity extends AppCompatActivity {
 
 
 //        setFloatArray();
+        findViewById(R.id.button2).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                String[] paths = new String[2];
+                paths[0]="/sdcard/Android/data/com.taobao.idlefish.multimedia/files/DCIM/idlefish_av/record_1535526010725.mp4";
+                paths[1]="/sdcard/Android/data/com.taobao.idlefish.multimedia/files/DCIM/idlefish_av/record_1535526062139.mp4";
+//        paths.add("/sdcard/av_framework/record_1517557496237.mp4");
+//        paths.add("/sdcard/av_framework/record_1517557601786.mp4");
+//        paths.add("/sdcard/av_framework/record_1517562471518.mp4");
+//        paths.add("/sdcard/av_framework/record_1517562474777.mp4");
+                String mVideoOutputPath = "/sdcard/combinate2.mp4";
+                long start = System.currentTimeMillis();
+
+                mergeMp4Clips(paths, mVideoOutputPath);
+
+                if(VERBOSE) Log.e(TAG,"MergeVideoUse time="+(System.currentTimeMillis()-start));
+            }
+        });
+
 
         findViewById(R.id.button).setOnClickListener(new View.OnClickListener() {
             @Override
@@ -55,9 +76,12 @@ public class MainActivity extends AppCompatActivity {
                 int[] pixels = new int[frameW * frameH];
                 long start = System.currentTimeMillis();
 
-                for (int i = 0; i < 100000; i++) {
-                    extractFrame2(path, 1000*1000, pixels, frameW, frameH, false);
-                }
+//                for (int i = 0; i < 100000; i++) {
+//                    extractFrame2(path, 1000*1000, pixels, frameW, frameH, false);
+//                }
+
+                extractFrame2(path, 1000*1000, pixels, frameW, frameH, false);
+
 
                 Log.e(TAG,"onClick use time="+(System.currentTimeMillis()-start));
 
@@ -69,6 +93,7 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
+    private  native void mergeMp4Clips(String[] paths, String mVideoOutputPath);
     /**
      * A native method that is implemented by the 'native-lib' native library,
      * which is packaged with this application.
